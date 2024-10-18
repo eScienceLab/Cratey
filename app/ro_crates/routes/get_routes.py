@@ -12,3 +12,4 @@ def get_ro_crate(crate_id):
 @ro_crates_bp.route('/ro-crates', methods=['GET'])
 def get_ro_crates():
     return jsonify([]), 200
+
