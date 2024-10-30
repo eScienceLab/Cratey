@@ -1,7 +1,8 @@
-from flask import Blueprint, request, jsonify, Response
-from werkzeug.utils import secure_filename
-import tempfile
 import os
+import tempfile
+
+from flask import Blueprint, jsonify, request, Response
+from werkzeug.utils import secure_filename
 
 from app.tasks.validation_tasks import (
     process_validation_task_by_id,
@@ -9,10 +10,10 @@ from app.tasks.validation_tasks import (
 )
 
 
-ro_crates_bp = Blueprint("ro_crates", __name__)
+post_routes_bp = Blueprint("post_routes", __name__)
 
 
-@ro_crates_bp.route("/validate_by_id", methods=["POST"])
+@post_routes_bp.route("/validate_by_id", methods=["POST"])
 def validate_ro_crate_from_id() -> tuple[Response, int]:
     """
     Endpoint to validate an RO-Crate using its ID from MinIO.
@@ -33,7 +34,7 @@ def validate_ro_crate_from_id() -> tuple[Response, int]:
         return jsonify({"error": "Missing required parameters"}), 400
 
     try:
-        # Queue the background task
+        # Queue the background task:
         process_validation_task_by_id.delay(crate_id, profile_name, webhook_url)
 
         return jsonify({"message": "Validation in progress"}), 202
