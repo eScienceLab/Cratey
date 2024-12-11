@@ -8,13 +8,13 @@ services:
     ports:
       - "5001:5000"
     environment:
-      - FLASK_APP=app
+      - FLASK_APP=cratey.py
       - FLASK_ENV=development
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     depends_on:
       - redis
       - minio
@@ -23,13 +23,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery -A app.tasks worker --loglevel=info
+    command: celery -A app.celery_worker.celery worker --loglevel=info
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     depends_on:
       - redis
       - minio
@@ -43,7 +43,14 @@ services:
     image: "minio/minio"
     ports:
       - "9000:9000"
+      - "9001:9001"
     environment:
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-    command: server /data
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_BROWSER_REDIRECT_PORT=9001
+    command: server --console-address ":9001" /data
+    volumes:
+      - minio_data:/data
+
+volumes:
+  minio_data:
