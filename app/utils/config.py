@@ -37,7 +37,6 @@ def make_celery(app=None):
     if app:
         celery.conf.update(app.config)
 
-        # Tasks should use the Flask app context:
         TaskBase = celery.Task
 
         class ContextTask(TaskBase):
