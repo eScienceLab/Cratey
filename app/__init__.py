@@ -1,12 +1,23 @@
+"""Initialises and configures Flask, integrates Celery, and registers application blueprints."""
+
+# Author: Alexander Hambley
+# License: BSD 3-Clause
+
 import os
 
 from flask import Flask
 
+from app.celery_worker import make_celery, celery
 from app.ro_crates.routes import ro_crates_bp
 from app.utils.config import DevelopmentConfig, ProductionConfig, make_celery
 
 
-def create_app():
+def create_app() -> Flask:
+    """
+    Create and configures Flask application.
+
+    :return: Flask: A configured Flask application instance.
+    """
     app = Flask(__name__)
     app.register_blueprint(ro_crates_bp, url_prefix="/ro_crates")
 
@@ -21,6 +32,7 @@ def create_app():
             print(rule)
         app.config.from_object(DevelopmentConfig)
 
-    celery = make_celery(app)
+    # Integrate Celery
+    make_celery(app)
 
-    return app, celery
+    return app
