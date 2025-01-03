@@ -1,14 +1,11 @@
-import os
-import tempfile
+"""Defines post API endpoints for validating RO-Crates using their IDs from MinIO."""
 
-from flask import Blueprint, jsonify, request, Response
-from werkzeug.utils import secure_filename
+# Author: Alexander Hambley
+# License: BSD 3-Clause
 
-from app.tasks.validation_tasks import (
-    process_validation_task_by_id,
-    process_validation_task_by_zip,
-)
+from flask import Blueprint, request, Response
 
+from app.services.validation_service import queue_ro_crate_validation_task
 
 post_routes_bp = Blueprint("post_routes", __name__)
 
@@ -16,28 +13,33 @@ post_routes_bp = Blueprint("post_routes", __name__)
 @post_routes_bp.route("/validate_by_id", methods=["POST"])
 def validate_ro_crate_from_id() -> tuple[Response, int]:
     """
-    Endpoint to validate an RO-Crate using its ID from MinIO.
+    Endpoint to validate an RO-Crate using its ID from MinIO. Requires webhook_url.
 
-    This function extracts the crate ID, profile name, and webhook URL from the request form data and queues a
-    background task to perform the validation.
-
-    :return: A JSON response with a success message and HTTP 202 status if the validation task is successfully
-        queued, or an error message with an appropriate status code in case of an error.
+    :param id: The ID of the RO-Crate to validate. Required.
+    :param profile_name: The profile name for validation. Optional.
+    :param webhook_url: The webhook URL where validation results will be sent. Required.
+    :return: A tuple containing the validation task's response and an HTTP status code.
+    :raises: KeyError: If required parameters (`id` or `webhook_url`) are missing.
     """
-    # Extract request data:
 
     crate_id = request.form.get("id")
     profile_name = request.form.get("profile_name")
     webhook_url = request.form.get("webhook_url")
 
-    if not crate_id or not profile_name or not webhook_url:
-        return jsonify({"error": "Missing required parameters"}), 400
+    return queue_ro_crate_validation_task(crate_id, profile_name, webhook_url)
 
-    try:
-        # Queue the background task:
-        process_validation_task_by_id.delay(crate_id, profile_name, webhook_url)
 
-        return jsonify({"message": "Validation in progress"}), 202
+@post_routes_bp.route("/validate_by_id_no_webhook", methods=["POST"])
+def validate_ro_crate_from_id_no_webhook() -> tuple[Response, int]:
+    """
+    Endpoint to validate an RO-Crate using its ID from MinIO. Does not require webhook_url.
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    :param id: The ID of the RO-Crate to validate. Required.
+    :param profile_name: The profile name for validation. Optional.
+    :return: A tuple containing the validation task's response and an HTTP status code.
+    :raises: KeyError: If required parameters (`id` or `webhook_url`) are missing.
+    """
+    crate_id = request.form.get("id")
+    profile_name = request.form.get("profile_name")
+
+    return queue_ro_crate_validation_task(crate_id, profile_name)

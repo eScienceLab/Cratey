@@ -12,7 +12,7 @@ def make_celery(app: Flask = None):
     Create and configure a Celery instance using Flask configuration.
 
     :param app: The Flask application. Configuration will be used to initialise Celery.
-    :return: Celery: A configured Celery instance
+    :return: Celery: A configured Celery instance.
     :raises ValueError: If the Flask configuration values are not provided.
     """
     if not app:

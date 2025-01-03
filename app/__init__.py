@@ -14,7 +14,7 @@ from app.utils.config import DevelopmentConfig, ProductionConfig, make_celery
 
 def create_app() -> Flask:
     """
-    Create and configures Flask application.
+    Creates and configures Flask application.
 
     :return: Flask: A configured Flask application instance.
     """
