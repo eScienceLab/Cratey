@@ -26,6 +26,11 @@ def validate_ro_crate_from_id() -> tuple[Response, int]:
     profile_name = request.form.get("profile_name")
     webhook_url = request.form.get("webhook_url")
 
+    if not crate_id:
+        raise KeyError("Missing required parameter: 'id'")
+    if not webhook_url:
+        raise KeyError("Missing required parameter: 'webhook_url'")
+
     return queue_ro_crate_validation_task(crate_id, profile_name, webhook_url)
 
 
@@ -41,5 +46,8 @@ def validate_ro_crate_from_id_no_webhook() -> tuple[Response, int]:
     """
     crate_id = request.form.get("id")
     profile_name = request.form.get("profile_name")
+
+    if not crate_id:
+        raise KeyError("Missing required parameter: 'id'")
 
     return queue_ro_crate_validation_task(crate_id, profile_name)
