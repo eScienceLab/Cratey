@@ -1,13 +1,16 @@
 """Service methods to queue RO-Crates for validation using the CRS4 validator and Celery."""
 
 # Author: Alexander Hambley
-# License: BSD 3-Clause
+# License: MIT
+# Copyright (c) 2025 eScience Lab, The University of Manchester
 
 import logging
 
 from flask import jsonify, Response
 
 from app.tasks.validation_tasks import process_validation_task_by_id
+
+logger = logging.getLogger(__name__)
 
 
 def queue_ro_crate_validation_task(
@@ -22,7 +25,7 @@ def queue_ro_crate_validation_task(
     :return: A tuple containing a JSON response and an HTTP status code.
     :raises: Exception: If an error occurs whilst queueing the task.
     """
-    logging.basicConfig(level=logging.INFO)
+
     logging.info(f"Processing: {crate_id}, {profile_name}, {webhook_url}")
 
     if not crate_id:

@@ -1,13 +1,14 @@
 """Configures and initialises a Celery instance for use with a Flask application."""
 
 # Author: Alexander Hambley
-# License: BSD 3-Clause
+# License: MIT
+# Copyright (c) 2025 eScience Lab, The University of Manchester
 
 from celery import Celery
 from flask import Flask
 
 
-def make_celery(app: Flask = None):
+def make_celery(app: Flask = None) -> Celery:
     """
     Create and configure a Celery instance using Flask configuration.
 

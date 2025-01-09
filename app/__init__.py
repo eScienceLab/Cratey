@@ -1,7 +1,8 @@
 """Initialises and configures Flask, integrates Celery, and registers application blueprints."""
 
 # Author: Alexander Hambley
-# License: BSD 3-Clause
+# License: MIT
+# Copyright (c) 2025 eScience Lab, The University of Manchester
 
 import os
 

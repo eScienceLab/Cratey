@@ -1,7 +1,8 @@
 """Defines post API endpoints for validating RO-Crates using their IDs from MinIO."""
 
 # Author: Alexander Hambley
-# License: BSD 3-Clause
+# License: MIT
+# Copyright (c) 2025 eScience Lab, The University of Manchester
 
 from flask import Blueprint, request, Response
 

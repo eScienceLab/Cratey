@@ -8,9 +8,13 @@ import logging
 import os
 
 from rocrate_validator import services
+from rocrate_validator.models import ValidationResult
 
 from app.celery_worker import celery
-from app.utils.minio_utils import fetch_ro_crate_from_minio
+from app.utils.minio_utils import (
+    fetch_ro_crate_from_minio,
+    update_validation_status_in_minio,
+)
 from app.utils.webhook_utils import send_webhook_notification
 
 logger = logging.getLogger(__name__)
@@ -42,8 +46,23 @@ def process_validation_task_by_id(
         # Perform validation:
         validation_result = perform_ro_crate_validation(file_path, profile_name)
 
-        # TODO: Prepare validation result and update RO-Crate on MinIO with the validation status
+        if isinstance(validation_result, str):
+            logging.error(f"Validation failed: {validation_result}")
+            # TODO: Send webhook with failure notification
+            raise Exception(f"Validation failed: {validation_result}")
+
+        if not validation_result.has_issues():
+            logging.info(f"RO Crate {file_path} is valid.")
+        else:
+            logging.info(f"RO Crate {file_path} is invalid.")
+
+        # Update the validation status in MinIO:
+        update_validation_status_in_minio(crate_id, validation_result.to_json())
+
         # TODO: Prepare the data to send to the webhook, and send the webhook notification.
+
+        if webhook_url:
+            send_webhook_notification(webhook_url, validation_result.to_json())
 
     except Exception as e:
         logging.error(f"Error processing validation task: {e}")
@@ -58,15 +77,19 @@ def process_validation_task_by_id(
             os.remove(file_path)
 
 
-def perform_ro_crate_validation(file_path: str, profile_name: str | None) -> str | None:
+def perform_ro_crate_validation(
+    file_path: str, profile_name: str | None
+) -> ValidationResult | str:
     """
     Validates an RO-Crate using the provided file path and profile name.
+
     :param file_path: The path to the RO-Crate file to validate
     :param profile_name: The name of the validation profile to use. Defaults to None. If None, the CRS4 validator will
         attempt to determine the profile.
-    :return: A string containing the validation result.
+    :return: The validation result.
     :raises Exception: If an error occurs during the validation process.
     """
+
     try:
         logging.info(f"Validating {file_path} with profile {profile_name}")
 
@@ -83,20 +106,7 @@ def perform_ro_crate_validation(file_path: str, profile_name: str | None) -> str
             **({"profile_identifier": profile_name} if profile_name else {}),
         )
 
-        result = services.validate(settings)
-
-        if not result.has_issues():
-            logging.info(f"RO Crate {file_path} is valid.")
-            # TODO: Return to update RO Crate on MinIO with validation status.
-
-        else:
-            logging.info(f"RO Crate {file_path} is invalid.")
-            # TODO: Return to implement invalid RO Crate logic.
-
-            for issue in result.get_issues():
-                print(
-                    f'Detected issue of severity {issue.severity.name} with check "{issue.check.identifier}": {issue.message}'
-                )
+        return services.validate(settings)
 
     except Exception as e:
         logging.error(f"Unexpected error during validation: {e}")
