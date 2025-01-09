@@ -4,20 +4,22 @@
 # License: MIT
 # Copyright (c) 2025 eScience Lab, The University of Manchester
 
-from minio import Minio, S3Error
+import json
+import logging
 import os
 import tempfile
-import logging
 
 from dotenv import load_dotenv
+from io import BytesIO
+from minio import Minio, S3Error
+
 
 logger = logging.getLogger(__name__)
 
 
 def fetch_ro_crate_from_minio(crate_id: str) -> str:
     """
-    Fetches an RO-Crate from MinIO based on the provided crate ID.
-    Downloads the crate as a file and returns the local file path.
+    Fetches an RO-Crate from MinIO based on the crate ID. Downloads the crate as a file and returns local file path.
 
     :param crate_id: The ID of the RO-Crate to fetch from MinIO.
     :return: The local file path where the RO-Crate is saved.
@@ -25,23 +27,11 @@ def fetch_ro_crate_from_minio(crate_id: str) -> str:
     :raises ValueError: If the required environment variables are not set.
     :raises Exception: If an unexpected error occurs during the operation.
     """
+
     load_dotenv()
 
     try:
-        minio_client = Minio(
-            endpoint=os.environ.get("MINIO_ENDPOINT"),
-            access_key=os.environ.get("MINIO_ROOT_USER"),
-            secret_key=os.environ.get("MINIO_ROOT_PASSWORD"),
-            secure=False,
-        )
-        logging.info("MinIO client initialised successfully.")
-
-        bucket_name = os.environ.get("MINIO_BUCKET_NAME")
-
-        if not bucket_name:
-            raise ValueError(
-                "RO Crate MINIO_BUCKET_NAME is not set in the environment variables."
-            )
+        minio_client, bucket_name = get_minio_client_and_bucket()
 
         object_name = f"{crate_id}.zip"
 
@@ -62,9 +52,80 @@ def fetch_ro_crate_from_minio(crate_id: str) -> str:
     except S3Error as s3_error:
         logging.error(f"MinIO S3 Error: {s3_error}")
         raise
+
     except ValueError as value_error:
         logging.error(f"Configuration Error: {value_error}")
         raise
+
     except Exception as e:
         logging.error(f"Unexpected error fetching RO-Crate from MinIO: {e}")
         raise
+
+
+def update_validation_status_in_minio(crate_id: str, validation_status: str) -> None:
+    """
+    Uploads the validation status to the MinIO bucket.
+
+    :param crate_id: The ID of the RO-Crate in MinIO
+    :param validation_status: The validation result to upload
+    :raises S3Error: If an error occurs during the MinIO operation
+    :raises ValueError: If the required environment variables are not set
+    :raises Exception: If an unexpected error occurs
+    """
+
+    load_dotenv()
+
+    try:
+        minio_client, bucket_name = get_minio_client_and_bucket()
+
+        # The object in MinIO is <crate_id>/validation_status.txt
+        object_name = f"{crate_id}/validation_status.txt"
+
+        minio_client.put_object(
+            bucket_name,
+            object_name,
+            data=BytesIO(json.dumps(validation_status).encode("utf-8")),
+            length=len(validation_status.encode("utf-8")),
+            content_type="application/json",
+        )
+
+        logging.info(
+            f"Validation status file uploaded to {bucket_name}/{object_name} successfully."
+        )
+
+    except S3Error as s3_error:
+        logging.error(f"MinIO S3 Error: {s3_error}")
+        raise
+
+    except ValueError as value_error:
+        logging.error(f"Configuration Error: {value_error}")
+        raise
+
+    except Exception as e:
+        logging.error(f"Unexpected error updating validation status in MinIO: {e}")
+        raise
+
+
+def get_minio_client_and_bucket() -> [Minio, str]:
+    """
+    Initialises the MinIO client and retrieves the bucket name from environment variables.
+
+    :return: A tuple containing the MinIO client and the bucket name.
+    :raises ValueError: If required environment variables are not set.
+    """
+    load_dotenv()
+
+    minio_client = Minio(
+        endpoint=os.environ.get("MINIO_ENDPOINT"),
+        access_key=os.environ.get("MINIO_ROOT_USER"),
+        secret_key=os.environ.get("MINIO_ROOT_PASSWORD"),
+        secure=False,
+    )
+
+    bucket_name = os.environ.get("MINIO_BUCKET_NAME")
+    if not bucket_name:
+        raise ValueError(
+            "RO Crate MINIO_BUCKET_NAME is not set in the environment variables."
+        )
+
+    return minio_client, bucket_name
